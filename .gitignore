@@ -15,5 +15,7 @@ backend/.env.*
 !backend/.env.example
 backend/.uvicorn.*
 backend/data/
+backend/cloud-env*.json
+cloud-env*.json
 frontend/.uni-*.log
 frontend/.uni-*.pid

@@ -34,6 +34,7 @@ Stitch 截图已复制到 `frontend/src/static/stitch/`，App 图标已整理为
 - Python
 - SQLite
 - ImageProvider 抽象，支持 `BltcyImageProvider` 真实生图；未配置密钥或请求失败时可回退 `MockImageProvider`
+- DeepSeekTextProvider：使用 DeepSeek V4 官方 API 处理对话提示词、AI 优化和画廊 RAG 融合
 - MockImageProvider，本地返回 `/mock-images/*.svg`，Stitch 示例图片优先返回 `/static/stitch-images/*`
 - Token session 登录：`/api/users/login` 返回 Bearer token，业务接口强制鉴权，前端自动保存并随请求携带
 - AuthProvider 抽象：预留微信、Apple、手机号登录入口
@@ -118,7 +119,12 @@ PAYMENT_PROVIDER=mock
 STORAGE_PROVIDER=local
 BLTCY_API_KEY=你的新画图APIKey
 BLTCY_BASE_URL=https://api.bltcy.ai
-BLTCY_IMAGE_MODEL=gptimge2
+BLTCY_IMAGE_MODEL=gpt-image-2
+DEEPSEEK_API_KEY=你的DeepSeek API Key
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_THINKING=disabled
+DEEPSEEK_GENERATION_PROMPTING=true
 ```
 
 微信登录未配置时，小程序会自动退回开发 token，不会阻塞创作和生图链路。

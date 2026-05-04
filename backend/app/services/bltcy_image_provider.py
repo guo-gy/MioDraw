@@ -15,7 +15,7 @@ class BltcyImageProvider(ImageProvider):
         *,
         api_key: str,
         base_url: str,
-        model: str = "gptimge2",
+        model: str = "gpt-image-2",
         size: str = "1024x1536",
         output_dir: Optional[Path] = None,
         timeout: float = 90,
@@ -147,7 +147,7 @@ def bltcy_provider_from_env(output_dir: Optional[Path] = None) -> Optional[Bltcy
     return BltcyImageProvider(
         api_key=api_key,
         base_url=os.getenv("BLTCY_BASE_URL", "https://api.bltcy.ai").strip(),
-        model=os.getenv("BLTCY_IMAGE_MODEL", "gptimge2").strip() or "gptimge2",
+        model=os.getenv("BLTCY_IMAGE_MODEL", "gpt-image-2").strip() or "gpt-image-2",
         size=os.getenv("BLTCY_IMAGE_SIZE", "1024x1536").strip() or "1024x1536",
         output_dir=output_dir,
         timeout=float(os.getenv("BLTCY_TIMEOUT", "90")),

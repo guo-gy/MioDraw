@@ -51,7 +51,7 @@ export interface PromptOptimization {
   original_prompt: string
   positive_prompt: string
   negative_prompt: string
-  source: 'rag_gallery' | 'rag_prompt' | 'mock_ai'
+  source: 'rag_gallery' | 'rag_prompt' | 'deepseek_ai' | 'mock_ai'
   score: number
   fusion_mode?: 'gallery_skill_user_prompt' | 'ai_user_prompt_only'
   gallery_skill?: string

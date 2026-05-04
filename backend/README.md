@@ -3,6 +3,8 @@
 FastAPI backend for 妙绘 MioDraw. It uses BLTCY image generation when
 `backend/.env` contains `BLTCY_API_KEY`, and falls back to mock images when the
 key is missing or `BLTCY_FALLBACK_TO_MOCK=true`.
+Conversation prompt planning, prompt optimization, and gallery RAG fusion use
+DeepSeek V4 when `DEEPSEEK_API_KEY` is configured.
 
 ## Start
 
@@ -12,7 +14,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# edit .env and set BLTCY_API_KEY
+# edit .env and set BLTCY_API_KEY / DEEPSEEK_API_KEY
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -61,7 +63,12 @@ PAYMENT_PROVIDER=mock
 STORAGE_PROVIDER=local
 BLTCY_API_KEY=your-new-image-api-key
 BLTCY_BASE_URL=https://api.bltcy.ai
-BLTCY_IMAGE_MODEL=gptimge2
+BLTCY_IMAGE_MODEL=gpt-image-2
+DEEPSEEK_API_KEY=your-deepseek-api-key
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_THINKING=disabled
+DEEPSEEK_GENERATION_PROMPTING=true
 ```
 
 The mini program frontend falls back to the dev token when WeChat login is not

@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from .services.bltcy_image_provider import bltcy_provider_from_env
+from .services.deepseek_text_provider import deepseek_provider_from_env
 from .services.mock_image_provider import MockImageProvider
 from .services.auth_provider import AppleAuthProvider, AuthProviderError, DevAuthProvider, WeChatAuthProvider
 from .services.moderation import ModerationError, TextModerator
@@ -47,6 +48,7 @@ def load_env_file() -> None:
 load_env_file()
 mock_image_provider = MockImageProvider()
 image_provider = bltcy_provider_from_env(GENERATED_IMAGE_DIR) or mock_image_provider
+text_provider = deepseek_provider_from_env()
 payment_provider = payment_provider_from_env()
 storage_provider = storage_provider_from_env(STORAGE_DIR)
 text_moderator = TextModerator()
@@ -677,6 +679,8 @@ def health():
             "db": str(DB_PATH),
             "image_provider": image_provider.metadata_for("health").get("provider", "unknown"),
             "image_model": image_provider.metadata_for("health").get("model", ""),
+            "text_provider": text_provider.metadata().get("provider", "local") if text_provider else "local",
+            "text_model": text_provider.metadata().get("model", "local_prompt_fusion") if text_provider else "local_prompt_fusion",
             "storage_provider": storage_provider.name,
             "cdn_base_url": os.getenv("CDN_BASE_URL", ""),
             "payment_provider": payment_provider.name,
@@ -1278,6 +1282,66 @@ def retrieve_prompt_references(user_prompt: str) -> List[Dict[str, Any]]:
     return sorted(candidates, key=lambda item: item["score"], reverse=True)[:5]
 
 
+def prompt_references_payload(references: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "id": item["id"],
+            "title": item["title"],
+            "content": item["content"],
+            "category": item["category"],
+            "style": item.get("style", ""),
+            "source": item["source"],
+            "score": round(item["score"], 3),
+        }
+        for item in references
+    ]
+
+
+def optimize_prompt_result(user_prompt: str, references: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    references = references if references is not None else retrieve_prompt_references(user_prompt)
+    best = references[0] if references else None
+    use_rag = bool(best and best["score"] >= 0.28)
+    reference = best if use_rag else None
+    ai_error = ""
+    if text_provider:
+        try:
+            ai_result = text_provider.optimize_prompt(user_prompt=user_prompt, references=references, use_rag=use_rag)
+            positive_prompt = ai_result["positive_prompt"]
+            return {
+                "original_prompt": user_prompt,
+                "positive_prompt": positive_prompt,
+                "negative_prompt": ai_result["negative_prompt"],
+                "source": "rag_gallery" if use_rag else "deepseek_ai",
+                "score": round(reference["score"], 3) if reference else 0,
+                "fusion_mode": ai_result["fusion_mode"],
+                "gallery_skill": ai_result["gallery_skill"] or (extract_gallery_skill(reference) if reference else ""),
+                "preserved_user_prompt": user_prompt.strip() in positive_prompt,
+                "user_prompt_coverage": round(user_prompt_coverage(user_prompt, positive_prompt), 3),
+                "provider": text_provider.metadata()["provider"],
+                "model": text_provider.metadata()["model"],
+                "references": prompt_references_payload(references),
+            }
+        except Exception as error:
+            ai_error = str(error)
+
+    fusion = fuse_user_prompt_with_gallery_skill(user_prompt, reference)
+    return {
+        "original_prompt": user_prompt,
+        "positive_prompt": fusion["positive_prompt"],
+        "negative_prompt": improve_negative_prompt(user_prompt, reference),
+        "source": "rag_gallery" if use_rag else "mock_ai",
+        "score": round(reference["score"], 3) if reference else 0,
+        "fusion_mode": fusion["fusion_mode"],
+        "gallery_skill": fusion["gallery_skill"],
+        "preserved_user_prompt": fusion["preserved"],
+        "user_prompt_coverage": fusion["coverage"],
+        "provider": "local_fallback" if ai_error else "local",
+        "model": "rule_based_prompt_fusion",
+        "error": ai_error,
+        "references": prompt_references_payload(references),
+    }
+
+
 def public_reference_images(reference_image_url: str = "") -> List[str]:
     if not reference_image_url:
         return []
@@ -1353,6 +1417,10 @@ def create_generation(
     ensure_safe_text(prompt, "generation_prompt")
     if negative_prompt:
         ensure_safe_text(negative_prompt, "generation_negative_prompt")
+    if not negative_prompt and os.getenv("DEEPSEEK_GENERATION_PROMPTING", "true").lower() in ("1", "true", "yes", "on"):
+        optimized = optimize_prompt_result(prompt)
+        prompt = optimized["positive_prompt"]
+        negative_prompt = optimized["negative_prompt"]
     adjust_credits(-8, "consume", "AI 图片生成")
     task_id = new_id("task")
     execute(
@@ -1872,34 +1940,7 @@ def my_prompts():
 def optimize_prompt(payload: PromptOptimizeRequest):
     user_prompt = payload.prompt.strip()
     ensure_safe_text(user_prompt, "prompt_optimize")
-    references = retrieve_prompt_references(user_prompt)
-    best = references[0] if references else None
-    use_rag = bool(best and best["score"] >= 0.28)
-    reference = best if use_rag else None
-    fusion = fuse_user_prompt_with_gallery_skill(user_prompt, reference)
-    result = {
-        "original_prompt": user_prompt,
-        "positive_prompt": fusion["positive_prompt"],
-        "negative_prompt": improve_negative_prompt(user_prompt, reference),
-        "source": "rag_gallery" if use_rag else "mock_ai",
-        "score": round(reference["score"], 3) if reference else 0,
-        "fusion_mode": fusion["fusion_mode"],
-        "gallery_skill": fusion["gallery_skill"],
-        "preserved_user_prompt": fusion["preserved"],
-        "user_prompt_coverage": fusion["coverage"],
-        "references": [
-            {
-                "id": item["id"],
-                "title": item["title"],
-                "content": item["content"],
-                "category": item["category"],
-                "style": item.get("style", ""),
-                "source": item["source"],
-                "score": round(item["score"], 3),
-            }
-            for item in references
-        ],
-    }
+    result = optimize_prompt_result(user_prompt)
     return ok(result, "提示词已优化")
 
 

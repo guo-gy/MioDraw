@@ -13,6 +13,7 @@ from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Query, Reques
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .services.bltcy_image_provider import bltcy_provider_from_env
 from .services.database_provider import database_provider_from_env
@@ -426,6 +427,7 @@ app.add_middleware(
 
 PUBLIC_API_PATHS = (
     "/health",
+    "/api/count",
     "/api/users/login",
     "/api/auth/wechat/login",
     "/api/auth/apple/login",
@@ -472,9 +474,33 @@ async def http_error(_, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content={"success": False, "data": {}, "message": str(exc.detail)})
 
 
+@app.exception_handler(StarletteHTTPException)
+async def starlette_http_error(_, exc: StarletteHTTPException):
+    message = "接口不存在" if exc.status_code == 404 else str(exc.detail)
+    return JSONResponse(status_code=exc.status_code, content={"success": False, "data": {}, "message": message})
+
+
 @app.exception_handler(Exception)
 async def generic_error(_, exc: Exception):
     return JSONResponse(status_code=500, content={"success": False, "data": {}, "message": str(exc)})
+
+
+@app.get("/")
+def root():
+    return ok(
+        {
+            "name": "MioDraw API",
+            "status": "ok",
+            "health": "/health",
+            "docs": "/docs",
+        },
+        "妙绘 MioDraw 后端服务运行中",
+    )
+
+
+@app.post("/api/count")
+def cloudbase_template_count(payload: Dict[str, Any] = Body(default_factory=dict)):
+    return ok({"count": 1, "action": payload.get("action", "ping")}, "MioDraw API 已替换云托管模板")
 
 
 @app.get("/health")

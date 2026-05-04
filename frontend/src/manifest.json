@@ -1,0 +1,46 @@
+{
+  "name": "妙绘 MioDraw",
+  "appid": "__UNI__MIODRAW",
+  "description": "AI 绘图跨端应用",
+  "versionName": "0.1.0",
+  "versionCode": "1",
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true,
+    "nvueStyleCompiler": "uni-app",
+    "compilerVersion": 3,
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "waiting": true,
+      "autoclose": true,
+      "delay": 0
+    },
+    "modules": {},
+    "distribute": {
+      "android": {
+        "permissions": [
+          "<uses-permission android:name=\"android.permission.INTERNET\"/>"
+        ]
+      },
+      "ios": {}
+    }
+  },
+  "mp-weixin": {
+    "appid": "wx2e1ef8d44ff1dc09",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "postcss": true,
+      "minified": true
+    },
+    "usingComponents": true
+  },
+  "h5": {
+    "router": {
+      "mode": "hash"
+    },
+    "devServer": {
+      "https": false
+    }
+  }
+}

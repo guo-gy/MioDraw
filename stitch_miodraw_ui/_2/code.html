@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>妙绘 MioDraw - 创作</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#e3e2e5",
+                        "primary-fixed": "#e8deff",
+                        "surface-dim": "#dadada",
+                        "on-primary-container": "#fcf6ff",
+                        "surface-bright": "#f9f9f9",
+                        "on-background": "#1a1c1c",
+                        "secondary-fixed-dim": "#c6c6cb",
+                        "inverse-on-surface": "#f0f1f1",
+                        "error-container": "#ffdad6",
+                        "primary": "#632ce5",
+                        "tertiary-container": "#727275",
+                        "on-surface-variant": "#494455",
+                        "on-secondary-fixed": "#1a1c1f",
+                        "on-surface": "#1a1c1c",
+                        "on-tertiary-fixed": "#1b1b1e",
+                        "inverse-primary": "#cdbdff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#e8e8e8",
+                        "surface-container-low": "#f3f3f4",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#616267",
+                        "on-error-container": "#93000a",
+                        "secondary": "#5d5e63",
+                        "outline": "#7a7487",
+                        "surface-container": "#eeeeee",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#cac3d8",
+                        "on-secondary-fixed-variant": "#45474b",
+                        "surface-tint": "#6833ea",
+                        "on-primary-fixed": "#20005f",
+                        "secondary-container": "#dfdfe4",
+                        "surface-container-highest": "#e2e2e2",
+                        "inverse-surface": "#2f3131",
+                        "tertiary": "#595a5c",
+                        "primary-container": "#7c4dff",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#4f00d0",
+                        "on-tertiary-container": "#faf8fb",
+                        "background": "#f9f9f9",
+                        "surface": "#f9f9f9",
+                        "tertiary-fixed-dim": "#c7c6c9",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#e2e2e7",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#464649",
+                        "surface-variant": "#e2e2e2",
+                        "primary-fixed-dim": "#cdbdff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter-grid": "12px",
+                        "margin-main": "20px",
+                        "stack-sm": "8px",
+                        "safe-area-bottom": "34px",
+                        "stack-md": "16px",
+                        "stack-lg": "24px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Inter"],
+                        "h2": ["Manrope"],
+                        "h1": ["Manrope"],
+                        "caption": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display": ["Manrope"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "h2": ["22px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "h1": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "caption": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+                        "body-lg": ["17px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display": ["34px", { "lineHeight": "41px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["15px", { "lineHeight": "21px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .pb-safe-offset-2 { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
+        .pt-safe { padding-top: env(safe-area-inset-top); }
+        .glass-panel { background: rgba(249, 249, 251, 0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite linear;
+        }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased selection:bg-primary-container selection:text-white font-body-md text-body-md overflow-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl border-b border-white/20 dark:border-zinc-800/50 shadow-[0_4px_30px_rgba(0,0,0,0.03)] flex items-center justify-between px-5 h-16 w-full pt-safe">
+<button class="hover:opacity-70 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary" data-icon="menu">menu</span>
+</button>
+<h1 class="text-xl font-bold text-zinc-900 dark:text-white font-manrope antialiased tracking-tight">妙绘 MioDraw</h1>
+<button class="hover:opacity-70 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined text-zinc-400 dark:text-zinc-500" data-icon="history">history</span>
+</button>
+</header>
+<!-- Chat Stream Area -->
+<main class="h-screen w-full overflow-y-auto px-margin-main pt-24 pb-48 hide-scrollbar flex flex-col gap-stack-lg">
+<!-- User Message -->
+<div class="flex justify-end w-full">
+<div class="bg-primary-container text-white rounded-lg rounded-tr-sm px-4 py-3 max-w-[85%] shadow-[0_4px_14px_rgba(124,77,255,0.2)]">
+<p class="font-body-md text-body-md">帮我画一个未来城市的赛博朋克风格街景，需要有霓虹灯和雨水反射，中心是一个发光的猫咪全息投影。</p>
+</div>
+</div>
+<!-- AI Message with Generated Image -->
+<div class="flex justify-start w-full">
+<div class="bg-surface-container-lowest rounded-lg rounded-tl-sm p-4 w-full max-w-[95%] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-surface-container-high/50 flex flex-col gap-stack-md">
+<div class="relative w-full aspect-square rounded-xl overflow-hidden bg-surface-container-high">
+<img alt="Cyberpunk city street scene with glowing neon lights reflecting in puddles on the wet ground. The focal point is a giant, glowing holographic cat projection in the center of the street. The mood is moody and cinematic, with deep shadows contrasting with bright neon pinks, blues, and purples. High detail, photorealistic, 8k resolution, Unreal Engine 5 render style." class="w-full h-full object-cover" data-alt="A moody, cinematic cyberpunk city street scene with vibrant neon pink, blue, and purple lights reflecting in puddles on the rain-slicked pavement. Deep shadows contrast with the bright lighting. In the center, a giant, luminous holographic cat projection floats above the street. High detail, photorealistic style, reminiscent of a high-end Unreal Engine 5 render." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDz8Z19IR2h-MPq7BkJo2Jjyg3jzsNCMJp45wPoVDIxtGvNA-wB6SU0sUxf0cH_Rozkk6GQ5xVzPC0oT8F7eoMIMxVU9K2d_pGslPpw-Kji7t8f1cDAf_Y_CGQ5DDw3D_3lVrYk71fK6jfAIvI9Gpthp_ObpPwq-5IksgmNpMu7lWjhkF-mg8YAD6iKvdlFcHvFaX_Rv0qEPnzpuzHkOtKzOkgKr-tafGbp2GBhvTEPscUI8Ussg939e5llr1Viu74CwLpf19lEBg"/>
+<!-- Loading Shimmer Overlay (Hidden in this state, shown as example below) -->
+</div>
+<!-- Action Chips -->
+<div class="flex flex-wrap gap-stack-sm mt-2">
+<button class="bg-surface-container text-on-surface-variant font-caption text-caption px-4 py-2 rounded-full hover:bg-surface-container-highest transition-colors flex items-center gap-1 active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[16px]" data-icon="edit">edit</span>继续修改
+                    </button>
+<button class="bg-surface-container text-on-surface-variant font-caption text-caption px-4 py-2 rounded-full hover:bg-surface-container-highest transition-colors flex items-center gap-1 active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[16px]" data-icon="brush">brush</span>局部编辑
+                    </button>
+<button class="bg-surface-container text-on-surface-variant font-caption text-caption px-4 py-2 rounded-full hover:bg-surface-container-highest transition-colors flex items-center gap-1 active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[16px]" data-icon="download">download</span>保存
+                    </button>
+<button class="bg-surface-container text-on-surface-variant font-caption text-caption px-4 py-2 rounded-full hover:bg-surface-container-highest transition-colors flex items-center gap-1 active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[16px]" data-icon="ios_share">ios_share</span>分享
+                    </button>
+</div>
+</div>
+</div>
+<!-- Generating State -->
+<div class="flex justify-start w-full">
+<div class="bg-surface-container-lowest rounded-lg rounded-tl-sm p-4 w-full max-w-[85%] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-surface-container-high/50 flex flex-col gap-stack-md relative overflow-hidden">
+<div class="absolute inset-0 shimmer pointer-events-none"></div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center animate-pulse">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant animate-pulse">正在生成中...</p>
+</div>
+<div class="w-full h-32 rounded-lg bg-surface-container-high/50 animate-pulse"></div>
+</div>
+</div>
+<!-- Spacer for bottom input area -->
+<div class="h-24"></div>
+</main>
+<!-- Bottom Input Area (Fixed) -->
+<div class="fixed bottom-20 w-full z-40 pb-safe-offset-2">
+<!-- Quick Modification Chips -->
+<div class="w-full overflow-x-auto hide-scrollbar px-margin-main pb-2 mb-2">
+<div class="flex gap-2 w-max">
+<button class="bg-surface-container-lowest/80 backdrop-blur-md border border-surface-container-high shadow-sm text-on-surface-variant font-caption text-caption px-4 py-2 rounded-full hover:text-primary transition-colors whitespace-nowrap active:scale-95">电影感</button>
+<button class="bg-surface-container-lowest/80 backdrop-blur-md border border-surface-container-high shadow-sm text-on-surface-variant font-caption text-caption px-4 py-2 rounded-full hover:text-primary transition-colors whitespace-nowrap active:scale-95">背景更干净</button>
+<button class="bg-surface-container-lowest/80 backdrop-blur-md border border-surface-container-high shadow-sm text-on-surface-variant font-caption text-caption px-4 py-2 rounded-full hover:text-primary transition-colors whitespace-nowrap active:scale-95">人物更自然</button>
+<button class="bg-surface-container-lowest/80 backdrop-blur-md border border-surface-container-high shadow-sm text-on-surface-variant font-caption text-caption px-4 py-2 rounded-full hover:text-primary transition-colors whitespace-nowrap active:scale-95">加一点光影</button>
+<button class="bg-primary-fixed text-primary-fixed-variant font-caption text-caption px-4 py-2 rounded-full hover:bg-inverse-primary transition-colors whitespace-nowrap active:scale-95 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="refresh">refresh</span>重新生成
+                </button>
+</div>
+</div>
+<!-- Main Input Bar -->
+<div class="px-margin-main">
+<div class="glass-panel rounded-xl shadow-[0_-5px_30px_rgba(0,0,0,0.05)] border border-white/40 flex items-end p-2 gap-2">
+<button class="p-2 text-outline hover:text-primary transition-colors rounded-full active:scale-95">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+</button>
+<textarea class="w-full bg-transparent border-none focus:ring-0 resize-none font-body-md text-body-md text-on-surface placeholder:text-outline py-2 max-h-32 hide-scrollbar" placeholder="输入你想画的内容..." rows="1"></textarea>
+<button class="p-2 bg-primary-container text-white rounded-full shadow-[0_4px_14px_rgba(124,77,255,0.3)] hover:opacity-90 transition-opacity active:scale-95 flex items-center justify-center h-10 w-10 shrink-0">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+</button>
+</div>
+</div>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full pb-safe-offset-2 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.04)] flex justify-around items-center h-20 px-8 z-50">
+<button class="flex flex-col items-center justify-center text-primary-container dark:text-violet-400 after:content-[''] after:w-1 after:h-1 after:bg-primary-container after:rounded-full after:mt-1 active:scale-90 transition-transform duration-300 ease-out group">
+<span class="material-symbols-outlined group-hover:opacity-80 transition-opacity" data-icon="auto_awesome" data-weight="fill">auto_awesome</span>
+<span class="font-manrope text-[11px] font-medium mt-1">创作</span>
+</button>
+<button class="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white active:scale-90 transition-transform duration-300 ease-out group">
+<span class="material-symbols-outlined group-hover:opacity-80 transition-opacity" data-icon="auto_stories">auto_stories</span>
+<span class="font-manrope text-[11px] font-medium mt-1">画廊</span>
+</button>
+<button class="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white active:scale-90 transition-transform duration-300 ease-out group">
+<span class="material-symbols-outlined group-hover:opacity-80 transition-opacity" data-icon="person">person</span>
+<span class="font-manrope text-[11px] font-medium mt-1">我的</span>
+</button>
+</nav>
+</body></html>

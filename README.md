@@ -118,6 +118,7 @@ PAYMENT_PROVIDER=mock
 STORAGE_PROVIDER=local
 BLTCY_API_KEY=你的新画图APIKey
 BLTCY_BASE_URL=https://api.bltcy.ai
+BLTCY_IMAGE_MODEL=gptimge2
 ```
 
 微信登录未配置时，小程序会自动退回开发 token，不会阻塞创作和生图链路。

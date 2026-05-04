@@ -61,6 +61,7 @@ PAYMENT_PROVIDER=mock
 STORAGE_PROVIDER=local
 BLTCY_API_KEY=your-new-image-api-key
 BLTCY_BASE_URL=https://api.bltcy.ai
+BLTCY_IMAGE_MODEL=gptimge2
 ```
 
 The mini program frontend falls back to the dev token when WeChat login is not

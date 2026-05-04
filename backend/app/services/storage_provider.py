@@ -36,6 +36,14 @@ class ObjectStorageProvider(ABC):
         return False
 
 
+def extension_for(filename: str, content_type: str) -> str:
+    suffix = Path(filename).suffix.lower()
+    if suffix and len(suffix) <= 8:
+        return suffix
+    guessed = mimetypes.guess_extension(content_type.split(";", 1)[0].strip()) if content_type else ""
+    return guessed or ".png"
+
+
 class LocalStorageProvider(ObjectStorageProvider):
     name = "local"
 
@@ -67,7 +75,7 @@ class LocalStorageProvider(ObjectStorageProvider):
         return path
 
     def save_bytes(self, content: bytes, *, filename: Optional[str] = None, content_type: str = "") -> str:
-        ext = self._extension_for(filename or "", content_type)
+        ext = extension_for(filename or "", content_type)
         relative_path = f"images/{uuid.uuid4().hex}{ext}"
         target = self.path_for(relative_path)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -120,13 +128,6 @@ class LocalStorageProvider(ObjectStorageProvider):
             return True
         return False
 
-    def _extension_for(self, filename: str, content_type: str) -> str:
-        suffix = Path(filename).suffix.lower()
-        if suffix and len(suffix) <= 8:
-            return suffix
-        guessed = mimetypes.guess_extension(content_type.split(";", 1)[0].strip()) if content_type else ""
-        return guessed or ".png"
-
 
 class _RemoteStorageProvider(ObjectStorageProvider):
     required_env: tuple[str, ...] = ()
@@ -172,7 +173,98 @@ class OSSStorageProvider(_RemoteStorageProvider):
 
 class COSStorageProvider(_RemoteStorageProvider):
     name = "cos"
-    required_env = ("COS_BUCKET", "COS_REGION", "COS_SECRET_ID", "COS_SECRET_KEY")
+    required_env = ("COS_BUCKET", "COS_REGION")
+
+    def __init__(self) -> None:
+        self.bucket = os.getenv("COS_BUCKET", "").strip()
+        self.region = os.getenv("COS_REGION", "").strip()
+        self.public_base_url = (
+            os.getenv("CDN_BASE_URL")
+            or os.getenv("COS_PUBLIC_BASE_URL")
+            or (f"https://{self.bucket}.cos.{self.region}.myqcloud.com" if self.bucket and self.region else "")
+        ).rstrip("/")
+
+    def public_url(self, relative_path: str) -> str:
+        self._require_config()
+        clean = relative_path.strip("/")
+        return f"{self.public_base_url}/{clean}" if self.public_base_url else clean
+
+    def save_bytes(self, content: bytes, *, filename: Optional[str] = None, content_type: str = "") -> str:
+        self._require_config()
+        key = f"images/{uuid.uuid4().hex}{extension_for(filename or '', content_type)}"
+        self._client().put_object(
+            Bucket=self.bucket,
+            Body=content,
+            Key=key,
+            ContentType=content_type or "application/octet-stream",
+        )
+        return self.public_url(key)
+
+    def ingest_url(self, url: str, *, base_dir: Optional[Path] = None) -> str:
+        if not url or url.startswith(("data:", "blob:", "file:", "wxfile:", "ttfile:", "myfile:")):
+            return url
+        if self._relative_key_from_url(url):
+            return url
+        if url.startswith("/generated-images/") and base_dir:
+            source = base_dir / "generated-images" / Path(url).name
+            if source.exists() and source.is_file():
+                return self.save_bytes(source.read_bytes(), filename=source.name)
+            return url
+        if url.startswith(("/static/", "/mock-images/", "/storage/")):
+            return url
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return url
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "MioDrawStorage/1.0"})
+            with urllib.request.urlopen(request, timeout=30) as response:
+                content = response.read()
+                content_type = response.headers.get("Content-Type", "")
+            filename = Path(parsed.path).name
+            return self.save_bytes(content, filename=filename, content_type=content_type)
+        except (urllib.error.URLError, OSError, ValueError, StorageConfigurationError):
+            return url
+
+    def upload_config(self, *, purpose: str = "user-upload") -> Dict[str, Any]:
+        self._require_config()
+        return {"provider": self.name, "mode": "server_upload", "endpoint": "/api/storage/upload", "purpose": purpose}
+
+    def delete_url(self, public_url: str) -> bool:
+        key = self._relative_key_from_url(public_url)
+        if not key:
+            return False
+        self._client().delete_object(Bucket=self.bucket, Key=key)
+        return True
+
+    def _relative_key_from_url(self, public_url: str) -> str:
+        if not public_url:
+            return ""
+        if self.public_base_url and public_url.startswith(f"{self.public_base_url}/"):
+            return public_url[len(self.public_base_url) + 1 :]
+        parsed = urlparse(public_url)
+        if parsed.netloc and self.bucket and parsed.netloc.startswith(self.bucket):
+            return parsed.path.strip("/")
+        return ""
+
+    def _credential(self, *keys: str) -> str:
+        for key in keys:
+            value = os.getenv(key, "").strip()
+            if value:
+                return value
+        return ""
+
+    def _client(self) -> Any:
+        secret_id = self._credential("COS_SECRET_ID", "TENCENTCLOUD_SECRETID", "TENCENTCLOUD_SECRET_ID", "TENCENT_SECRET_ID")
+        secret_key = self._credential("COS_SECRET_KEY", "TENCENTCLOUD_SECRETKEY", "TENCENTCLOUD_SECRET_KEY", "TENCENT_SECRET_KEY")
+        token = self._credential("COS_SESSION_TOKEN", "TENCENTCLOUD_SESSIONTOKEN", "TENCENTCLOUD_TOKEN")
+        if not secret_id or not secret_key:
+            raise StorageConfigurationError("COS 存储缺少密钥：需要 COS_SECRET_ID/COS_SECRET_KEY，或云托管运行时注入 TENCENTCLOUD_SECRETID/TENCENTCLOUD_SECRETKEY")
+        try:
+            from qcloud_cos import CosConfig, CosS3Client
+        except ImportError as error:
+            raise StorageConfigurationError("COS 存储需要安装 cos-python-sdk-v5") from error
+        config = CosConfig(Region=self.region, SecretId=secret_id, SecretKey=secret_key, Token=token or None, Scheme="https")
+        return CosS3Client(config)
 
 
 def local_storage_from_env(root_dir: Path) -> LocalStorageProvider:

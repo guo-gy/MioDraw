@@ -46,9 +46,10 @@ Auth, payment, storage, moderation, and AI tasks now use provider boundaries:
   When `PAYMENT_PROVIDER=wechat`, the provider creates a WeChat Pay v3 JSAPI
   prepay order and returns `uni.requestPayment` parameters.
 - Generated or saved images are ingested through `StorageProvider` and served
-  from `/storage/{path}`. `/api/storage/upload-token`, `/api/storage/upload`,
-  and `/api/storage/objects` cover upload and object lifecycle. Set
-  `STORAGE_PROVIDER` and `CDN_BASE_URL` to switch to OSS/COS/S3/CDN later.
+  through local storage or Tencent COS. `/api/storage/upload-token`,
+  `/api/storage/upload`, and `/api/storage/objects` cover upload and object
+  lifecycle. Set `STORAGE_PROVIDER=cos` plus `COS_BUCKET` / `COS_REGION` for
+  CloudBase COS.
 - Image generation is a queued task: create returns `pending`, background work
   updates `generating`, `completed`, or `failed`.
 - Content safety is wired through `TextModerator`; reports and blocks are
@@ -56,11 +57,19 @@ Auth, payment, storage, moderation, and AI tasks now use provider boundaries:
 
 ## Fast WeChat Launch
 
-If you want the fastest API-only trial first, keep:
+For Tencent CloudBase production, use MySQL plus COS:
 
 ```env
 PAYMENT_PROVIDER=mock
-STORAGE_PROVIDER=local
+DATABASE_PROVIDER=mysql
+MYSQL_ADDRESS=10.13.103.91:3306
+MYSQL_USERNAME=root
+MYSQL_PASSWORD=your-cloudbase-mysql-password
+MYSQL_DATABASE=miodraw
+MYSQL_CHARSET=utf8mb4
+STORAGE_PROVIDER=cos
+COS_BUCKET=7072-prod-d0gx2ndlz5983da7c-1428421328
+COS_REGION=ap-shanghai
 BLTCY_API_KEY=your-new-image-api-key
 BLTCY_BASE_URL=https://api.bltcy.ai
 BLTCY_IMAGE_MODEL=gpt-image-2

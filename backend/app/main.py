@@ -2,7 +2,6 @@ import json
 import os
 import re
 import secrets
-import sqlite3
 import time
 import uuid
 import base64
@@ -16,6 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from .services.bltcy_image_provider import bltcy_provider_from_env
+from .services.database_provider import database_provider_from_env
 from .services.deepseek_text_provider import deepseek_provider_from_env
 from .services.mock_image_provider import MockImageProvider
 from .services.auth_provider import AppleAuthProvider, AuthProviderError, DevAuthProvider, WeChatAuthProvider
@@ -46,6 +46,7 @@ def load_env_file() -> None:
 
 
 load_env_file()
+database = database_provider_from_env(DATA_DIR, DB_PATH)
 mock_image_provider = MockImageProvider()
 image_provider = bltcy_provider_from_env(GENERATED_IMAGE_DIR) or mock_image_provider
 text_provider = deepseek_provider_from_env()
@@ -97,7 +98,7 @@ def ok(data: Any = None, message: str = "") -> Dict[str, Any]:
     return {"success": True, "data": data if data is not None else {}, "message": message}
 
 
-def row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
+def row_to_dict(row: Any) -> Dict[str, Any]:
     value = dict(row)
     for key in ("params", "mask_data"):
         if key in value and isinstance(value[key], str) and value[key]:
@@ -111,221 +112,26 @@ def row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
     return value
 
 
-def db() -> sqlite3.Connection:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
 def execute(sql: str, params: tuple = ()) -> None:
-    with db() as conn:
-        conn.execute(sql, params)
-        conn.commit()
+    database.execute(sql, params)
 
 
 def fetch_one(sql: str, params: tuple = ()) -> Optional[Dict[str, Any]]:
-    with db() as conn:
-        row = conn.execute(sql, params).fetchone()
-        return row_to_dict(row) if row else None
+    row = database.fetch_one(sql, params)
+    return row_to_dict(row) if row else None
 
 
 def fetch_all(sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
-    with db() as conn:
-        rows = conn.execute(sql, params).fetchall()
-        return [row_to_dict(row) for row in rows]
+    return [row_to_dict(row) for row in database.fetch_all(sql, params)]
 
 
 def init_schema() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with db() as conn:
-        conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-              id TEXT PRIMARY KEY,
-              nickname TEXT NOT NULL,
-              avatar_url TEXT NOT NULL,
-              bio TEXT NOT NULL,
-              credits INTEGER NOT NULL,
-              created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS sessions (
-              token TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              provider TEXT NOT NULL,
-              provider_subject TEXT NOT NULL,
-              created_at REAL NOT NULL,
-              expires_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS settings (
-              user_id TEXT PRIMARY KEY,
-              default_visibility TEXT NOT NULL,
-              notifications INTEGER NOT NULL,
-              language TEXT NOT NULL,
-              theme TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS credit_transactions (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              type TEXT NOT NULL,
-              amount INTEGER NOT NULL,
-              balance_after INTEGER NOT NULL,
-              title TEXT NOT NULL,
-              created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS payment_orders (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              package_id TEXT NOT NULL,
-              credits INTEGER NOT NULL,
-              price REAL NOT NULL,
-              currency TEXT NOT NULL,
-              status TEXT NOT NULL,
-              provider TEXT NOT NULL,
-              provider_order_id TEXT NOT NULL,
-              payment_url TEXT NOT NULL,
-              created_at REAL NOT NULL,
-              paid_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS payment_events (
-              id TEXT PRIMARY KEY,
-              order_id TEXT NOT NULL,
-              event_type TEXT NOT NULL,
-              payload TEXT NOT NULL,
-              created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS artworks (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              title TEXT NOT NULL,
-              prompt TEXT NOT NULL,
-              negative_prompt TEXT NOT NULL,
-              image_url TEXT NOT NULL,
-              category TEXT NOT NULL,
-              visibility TEXT NOT NULL,
-              style TEXT NOT NULL,
-              width INTEGER NOT NULL,
-              height INTEGER NOT NULL,
-              liked INTEGER NOT NULL DEFAULT 0,
-              favorited INTEGER NOT NULL DEFAULT 0,
-              likes INTEGER NOT NULL DEFAULT 0,
-              collects INTEGER NOT NULL DEFAULT 0,
-              params TEXT NOT NULL,
-              is_gallery INTEGER NOT NULL DEFAULT 0,
-              created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS prompts (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              title TEXT NOT NULL,
-              content TEXT NOT NULL,
-              category TEXT NOT NULL,
-              visibility TEXT NOT NULL,
-              uses INTEGER NOT NULL DEFAULT 0,
-              created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS conversations (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              title TEXT NOT NULL,
-              cover_image_url TEXT NOT NULL,
-              created_at REAL NOT NULL,
-              updated_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS messages (
-              id TEXT PRIMARY KEY,
-              conversation_id TEXT NOT NULL,
-              role TEXT NOT NULL,
-              content TEXT NOT NULL,
-              image_url TEXT NOT NULL,
-              task_id TEXT NOT NULL,
-              created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS generation_tasks (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              conversation_id TEXT NOT NULL,
-              prompt TEXT NOT NULL,
-              status TEXT NOT NULL,
-              image_url TEXT NOT NULL,
-              artwork_id TEXT NOT NULL,
-              created_at REAL NOT NULL,
-              updated_at REAL NOT NULL,
-              error TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS editor_tasks (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              image_id TEXT NOT NULL,
-              source_image_url TEXT NOT NULL,
-              mask_data TEXT NOT NULL,
-              prompt TEXT NOT NULL,
-              status TEXT NOT NULL,
-              result_image_url TEXT NOT NULL,
-              created_at REAL NOT NULL,
-              updated_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS follows (
-              user_id TEXT NOT NULL,
-              target_user_id TEXT NOT NULL,
-              followed_at REAL NOT NULL,
-              PRIMARY KEY (user_id, target_user_id)
-            );
-            CREATE TABLE IF NOT EXISTS storage_objects (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              source_url TEXT NOT NULL,
-              public_url TEXT NOT NULL,
-              provider TEXT NOT NULL,
-              purpose TEXT NOT NULL,
-              created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS auth_identities (
-              user_id TEXT NOT NULL,
-              provider TEXT NOT NULL,
-              provider_subject TEXT NOT NULL,
-              raw TEXT NOT NULL,
-              created_at REAL NOT NULL,
-              PRIMARY KEY (provider, provider_subject)
-            );
-            CREATE TABLE IF NOT EXISTS sms_codes (
-              phone TEXT PRIMARY KEY,
-              code TEXT NOT NULL,
-              expires_at REAL NOT NULL,
-              consumed INTEGER NOT NULL DEFAULT 0,
-              created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS blocks (
-              user_id TEXT NOT NULL,
-              target_user_id TEXT NOT NULL,
-              blocked_at REAL NOT NULL,
-              PRIMARY KEY (user_id, target_user_id)
-            );
-            CREATE TABLE IF NOT EXISTS reports (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              target_type TEXT NOT NULL,
-              target_id TEXT NOT NULL,
-              reason TEXT NOT NULL,
-              status TEXT NOT NULL,
-              created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS moderation_events (
-              id TEXT PRIMARY KEY,
-              user_id TEXT NOT NULL,
-              target_type TEXT NOT NULL,
-              target_id TEXT NOT NULL,
-              status TEXT NOT NULL,
-              reason TEXT NOT NULL,
-              created_at REAL NOT NULL
-            );
-            """
-        )
-        conn.execute("UPDATE artworks SET favorited = 1 WHERE liked = 1")
-        conn.execute("UPDATE artworks SET liked = favorited")
-        conn.execute("UPDATE artworks SET collects = MAX(collects, likes) WHERE is_gallery = 1")
-        conn.execute("UPDATE artworks SET likes = collects WHERE is_gallery = 1")
-        conn.commit()
+    database.init_schema()
+    execute("UPDATE artworks SET favorited = 1 WHERE liked = 1")
+    execute("UPDATE artworks SET liked = favorited")
+    execute("UPDATE artworks SET collects = MAX(collects, likes) WHERE is_gallery = 1")
+    execute("UPDATE artworks SET likes = collects WHERE is_gallery = 1")
 
 
 def seed() -> None:
@@ -676,7 +482,8 @@ def health():
     return ok(
         {
             "status": "ok",
-            "db": str(DB_PATH),
+            "db_provider": database.name,
+            "db": database.health_info(),
             "image_provider": image_provider.metadata_for("health").get("provider", "unknown"),
             "image_model": image_provider.metadata_for("health").get("model", ""),
             "text_provider": text_provider.metadata().get("provider", "local") if text_provider else "local",
@@ -706,6 +513,8 @@ def generated_image(filename: str):
 
 @app.get("/storage/{relative_path:path}")
 def stored_file(relative_path: str):
+    if not hasattr(storage_provider, "path_for"):
+        raise HTTPException(status_code=404, detail="当前存储由对象存储公开 URL 访问")
     path = storage_provider.path_for(relative_path)
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail="文件不存在")

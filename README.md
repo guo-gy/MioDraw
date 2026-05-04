@@ -32,14 +32,14 @@ Stitch 截图已复制到 `frontend/src/static/stitch/`，App 图标已整理为
 
 - FastAPI
 - Python
-- SQLite
+- SQLite / MySQL，可通过 `DATABASE_PROVIDER` 切换；腾讯云托管正式环境推荐 MySQL
 - ImageProvider 抽象，支持 `BltcyImageProvider` 真实生图；未配置密钥或请求失败时可回退 `MockImageProvider`
 - DeepSeekTextProvider：使用 DeepSeek V4 官方 API 处理对话提示词、AI 优化和画廊 RAG 融合
 - MockImageProvider，本地返回 `/mock-images/*.svg`，Stitch 示例图片优先返回 `/static/stitch-images/*`
 - Token session 登录：`/api/users/login` 返回 Bearer token，业务接口强制鉴权，前端自动保存并随请求携带
 - AuthProvider 抽象：预留微信、Apple、手机号登录入口
 - PaymentProvider 抽象与订单表：充值先创建订单，支持确认、取消、退款、回调事件
-- StorageProvider 抽象：生成图、局部编辑图、保存作品会入本地对象存储，预留 OSS/COS/S3/CDN
+- StorageProvider 抽象：生成图、局部编辑图、保存作品可入本地存储或腾讯 COS
 - TextModerator、举报、拉黑、关注等社区能力骨架
 
 ## 启动后端
@@ -112,11 +112,19 @@ npm run deploy:mp-weixin
 MP_WEIXIN_PRIVATE_KEY_PATH=/path/to/private.key npm run deploy:mp-weixin
 ```
 
-如果先按“只用画图 API 快速上线/内测”，可以暂时保持：
+腾讯云托管正式环境建议：
 
 ```env
 PAYMENT_PROVIDER=mock
-STORAGE_PROVIDER=local
+DATABASE_PROVIDER=mysql
+MYSQL_ADDRESS=10.13.103.91:3306
+MYSQL_USERNAME=root
+MYSQL_PASSWORD=你的腾讯云托管MySQL密码
+MYSQL_DATABASE=miodraw
+MYSQL_CHARSET=utf8mb4
+STORAGE_PROVIDER=cos
+COS_BUCKET=7072-prod-d0gx2ndlz5983da7c-1428421328
+COS_REGION=ap-shanghai
 BLTCY_API_KEY=你的新画图APIKey
 BLTCY_BASE_URL=https://api.bltcy.ai
 BLTCY_IMAGE_MODEL=gpt-image-2
